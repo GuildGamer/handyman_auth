@@ -26,10 +26,11 @@ class HandyManUser(AbstractBaseUser):
     dob = models.DateField("Date of Birth", null=True, blank= True)
     gender = models.CharField(choices=GENDER, max_length=1)
     country = models.ForeignKey("Country", verbose_name="country", on_delete=models.PROTECT)
+    avatar = models.ImageField(upload_to="avatars/")
     
 
     def create_token(self):
-        
-
-token = Token.objects.create(user=...)
-print(token.key)
+        token = Token.objects.create(user=self)
+        self.token = token
+        return token.key
+    
