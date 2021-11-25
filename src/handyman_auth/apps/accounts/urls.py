@@ -1,10 +1,15 @@
+from django.http.response import HttpResponse
 from rest_framework.routers import DefaultRouter
+from django.urls import path
 from .views import(
-    AccountsViewSet
+    UserViewSet
 )
 
 router = DefaultRouter()
-router.register(r'accounts', AccountsViewSet, basename='accounts')
+router.register(r'accounts', UserViewSet, basename='accounts')
 
-app_name = "accounts"
 urlpatterns = router.urls
+app_name = "accounts"
+
+
+

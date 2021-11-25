@@ -5,8 +5,8 @@ from rest_framework.authtoken.models import Token
 
 
 class Country(models.Model):
-    name = models.CharField()
-    country_code = models.CharField()
+    name = models.CharField(max_length=254)
+    country_code = models.CharField(max_length=254)
     created = models.DateTimeField(auto_now_add=True)
 
 class HandyManUser(AbstractBaseUser):

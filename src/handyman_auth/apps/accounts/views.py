@@ -5,6 +5,11 @@ from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.decorators import action
 
 class UserViewSet(viewsets.ModelViewSet):
+
+    """
+    HandyManUser Viewset
+    """
+
     serializer_class = UserModelSerializer
     queryset = HandyManUser.objects.all()
     permission_classes = [IsAuthenticated]
