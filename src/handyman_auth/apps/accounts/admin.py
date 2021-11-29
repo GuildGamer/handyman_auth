@@ -1,3 +1,5 @@
 from django.contrib import admin
 
-# Register your models here.
+from handyman_auth.apps.accounts.models import HandyManBaseUser
+
+admin.site.register(HandyManBaseUser)

@@ -9,7 +9,11 @@ class Country(models.Model):
     country_code = models.CharField(max_length=254)
     created = models.DateTimeField(auto_now_add=True)
 
-class HandyManUser(AbstractBaseUser):
+class HandyManBaseUser(AbstractBaseUser):
+
+    EMAIL_FIELD = 'email'
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = []
 
     GENDER = (
         ("m" , "Male"),
@@ -24,8 +28,8 @@ class HandyManUser(AbstractBaseUser):
     firstname = models.CharField(max_length=254)
     lastname = models.CharField(max_length=254)
     dob = models.DateField("Date of Birth", null=True, blank= True)
-    gender = models.CharField(choices=GENDER, max_length=1)
-    country = models.ForeignKey("Country", verbose_name="country", on_delete=models.PROTECT)
+    gender = models.CharField(choices=GENDER, max_length=1, blank=True, null=True)
+    country = models.ForeignKey("Country", verbose_name="country", on_delete=models.PROTECT, null=True)
     avatar = models.ImageField(upload_to="avatars/")
     
 
@@ -33,4 +37,7 @@ class HandyManUser(AbstractBaseUser):
         token = Token.objects.create(user=self)
         self.token = token
         return token.key
+
+def HandyManSP(HandyManBaseUser):
+    pass
     
