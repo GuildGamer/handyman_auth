@@ -14,6 +14,8 @@ from django.utils import timezone
 from rest_framework.authtoken.models import Token
 from handyman_auth.settings import ACTIVATE_LINK_URL
 
+from handyman_auth.apps.email_utility import send_email as email
+
 from django.contrib.auth.tokens import default_token_generator
 
 User = get_user_model()
@@ -60,6 +62,13 @@ class UserViewSet(viewsets.ModelViewSet):
             confirmation_token = default_token_generator.make_token(user)
             activation_link = f"{activate_link_url}?user_id={user.id}&confirmation_token={confirmation_token}"
             print(activation_link)
+
+            email(
+                recipient_list=["user.email"],
+                subject="HandyMan Email Verification",
+                message=activation_link,
+            )
+
             # user.set_password(sz.data["password"])
 
             data = {
@@ -187,9 +196,73 @@ class UserViewSet(viewsets.ModelViewSet):
         user.save()
         return Response("Email successfully confirmed")
 
+    @action(
+        methods=[
+            "POST",
+        ],
+        detail=False,
+        url_path="deactivate",
+        permission_classes=[IsAuthenticated],
+        parser_classes=(
+            parsers.MultiPartParser,
+            parsers.FormParser,
+            parsers.JSONParser,
+        ),
+    )
+    def deactivate(self, request):
+        email = request.data["email"]
+        password = request.data["password"]
+        try:
+            user: User = User.objects.filter(email=email).first()
+        except User.DoesNotExist:
+            return Response(
+                {"error": True, "message": "Please check your username and password"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        except Exception as e:
+            capture_exception(e)
+            print(e)
+            return Response(
+                {
+                    "error": "unable to deactivate account at this moment, please try again later"
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not user.check_password(password):
+            return Response(
+                {"error": "invalid credentials"}, status=status.HTTP_403_FORBIDDEN
+            )
+        if user.is_active == False:
+            return Response(
+                data={"this account has already been deactivated"},
+                status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+        with transaction.atomic():
+            token = Token.objects.get(user=user)
+            token.delete()
+            user.token = None
+            user.is_active = False
+
+        return Response(
+            {
+                "success": True,
+                "data": {
+                    "user": {
+                        "id": user.id,
+                        "email": user.email,
+                        "firstname": user.firstname,
+                        "lastname": user.lastname,
+                        "phone": user.phone,
+                        "is_active": user.is_active,
+                        "token": user.token,
+                    }
+                },
+            },
+            status=status.HTTP_202_ACCEPTED,
+        )
+
         # sign-up including email verification for activation
         # delete account
-        # deactivate account
         # logout
         # profile editing and change password
         # forgotten password
