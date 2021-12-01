@@ -19,6 +19,7 @@ from django.contrib.auth.tokens import default_token_generator
 User = get_user_model()
 activate_link_url = ACTIVATE_LINK_URL
 
+
 class UserViewSet(viewsets.ModelViewSet):
 
     """
@@ -31,7 +32,9 @@ class UserViewSet(viewsets.ModelViewSet):
     parser_classes = (parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser)
 
     @action(
-        methods=["POST",],
+        methods=[
+            "POST",
+        ],
         detail=False,
         url_path="sign-up",
         permission_classes=[AllowAny],
@@ -49,29 +52,27 @@ class UserViewSet(viewsets.ModelViewSet):
         """
         sz = UserModelSerializer(data=request.data)
         if not sz.is_valid():
-            data = {
-                "success": False,
-                "error": True,
-                "msg": sz.errors
-            }
+            data = {"success": False, "error": True, "msg": sz.errors}
 
-            return Response(data=data, status = status.HTTP_400_BAD_REQUEST)
+            return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
         try:
             user = sz.save()
             confirmation_token = default_token_generator.make_token(user)
-            activation_link = f'{activate_link_url}?user_id={user.id}&confirmation_token={confirmation_token}'
-            print (activation_link)
-                # user.set_password(sz.data["password"])
-            
+            activation_link = f"{activate_link_url}?user_id={user.id}&confirmation_token={confirmation_token}"
+            print(activation_link)
+            # user.set_password(sz.data["password"])
+
             data = {
-                "success": True, 
-                "data":{"user":{
-                    "id": user.id,
-                    "email": user.email,
-                    "firstname": user.firstname,
-                    "lastname": user.lastname,
-                    # "token":user.token
-                }}
+                "success": True,
+                "data": {
+                    "user": {
+                        "id": user.id,
+                        "email": user.email,
+                        "firstname": user.firstname,
+                        "lastname": user.lastname,
+                        # "token":user.token
+                    }
+                },
             }
 
             stats = status.HTTP_201_CREATED
@@ -87,11 +88,13 @@ class UserViewSet(viewsets.ModelViewSet):
             }
 
             stats = status.HTTP_200_OK
-        
-        return Response(data=data, status = stats)
+
+        return Response(data=data, status=stats)
 
     @action(
-        methods=["POST",],
+        methods=[
+            "POST",
+        ],
         detail=False,
         url_path="sign-in",
         permission_classes=[AllowAny],
@@ -103,8 +106,8 @@ class UserViewSet(viewsets.ModelViewSet):
     )
     @transaction.atomic
     def sign_in(self, request):
-        email = request.data['email']
-        password = request.data['password']
+        email = request.data["email"]
+        password = request.data["password"]
         try:
             user: User = User.objects.filter(email=email).first()
         except User.DoesNotExist:
@@ -116,7 +119,9 @@ class UserViewSet(viewsets.ModelViewSet):
             capture_exception(e)
             print(e)
             return Response(
-                {"error": "unable to log you in at this moment, please try again later"},
+                {
+                    "error": "unable to log you in at this moment, please try again later"
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
         if not user.check_password(password):
@@ -124,12 +129,14 @@ class UserViewSet(viewsets.ModelViewSet):
                 {"error": "invalid credentials"}, status=status.HTTP_403_FORBIDDEN
             )
         if user.is_active == False:
-            return Response(data= {"verify email to activate account"}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+            return Response(
+                data={"verify email to activate account"},
+                status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
         with transaction.atomic():
             try:
                 token = Token.objects.get(user=user)
                 token.delete()
-                
 
             except Token.DoesNotExist:
                 pass
@@ -138,42 +145,47 @@ class UserViewSet(viewsets.ModelViewSet):
             user.token = token
             user.save()
             user.refresh_from_db()
-            
+
         data = UserModelSerializer(user).data
         data["token"] = user.token
         data["timestamp"] = timezone.now().timestamp()
 
         response_data = {
-            "success": True, 
-            "data":{"user":{
-                "id": data["id"],
-                "email": data["email"],
-                "firstname": data["firstname"],
-                "lastname": data["lastname"],
-                "phone": data["phone"],
-                "token":data["token"],
-                "timestamp": data["timestamp"]
-            }}
+            "success": True,
+            "data": {
+                "user": {
+                    "id": data["id"],
+                    "email": data["email"],
+                    "firstname": data["firstname"],
+                    "lastname": data["lastname"],
+                    "phone": data["phone"],
+                    "token": data["token"],
+                    "timestamp": data["timestamp"],
+                }
+            },
         }
 
         return Response(data=response_data, status=status.HTTP_200_OK)
 
-    @action(detail=False, permission_classes=[AllowAny], methods=['get'])
+    @action(detail=False, permission_classes=[AllowAny], methods=["get"])
     def activate(self, request, id=None):
-        user_id = request.query_params.get('user_id', '')
-        confirmation_token = request.query_params.get('confirmation_token', '')
+        user_id = request.query_params.get("user_id", "")
+        confirmation_token = request.query_params.get("confirmation_token", "")
         try:
             user = self.get_queryset().get(id=user_id)
-        except(TypeError, ValueError, OverflowError, User.DoesNotExist):
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
             user = None
         if user is None:
-            return Response('User not found', status=status.HTTP_400_BAD_REQUEST)
+            return Response("User not found", status=status.HTTP_400_BAD_REQUEST)
         if not default_token_generator.check_token(user, confirmation_token):
-            return Response('Token is invalid or expired. Please request another confirmation email by signing in.', status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                "Token is invalid or expired. Please request another confirmation email by signing in.",
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         user.email_confirmed = True
         user.is_active = True
         user.save()
-        return Response('Email successfully confirmed')
+        return Response("Email successfully confirmed")
 
         # sign-up including email verification for activation
         # delete account
@@ -181,4 +193,3 @@ class UserViewSet(viewsets.ModelViewSet):
         # logout
         # profile editing and change password
         # forgotten password
-        
